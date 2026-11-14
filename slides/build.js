@@ -12,16 +12,16 @@ const H = THEME.colors;
 const pres = new pptxgen();
 pres.layout = "LAYOUT_16x9";
 pres.theme = { headFontFace: THEME.headFontFace, bodyFontFace: THEME.bodyFontFace };
-pres.title = "AI 시대의 서·논술형 평가";
-pres.author = "연수 강사";
+pres.title = "AI 활용 서·논술형 평가";
+pres.author = "김수경";
 const C = pres.SchemeColor;
-const FOOT = "AI 시대의 서·논술형 평가";
+const FOOT = "AI 활용 서·논술형 평가";
 const SRC = "교육부·17개 시·도교육청·한국교육과정평가원 서·논술형 평가 연수 자료를 재구성";
 
 /* ---------- 레이아웃 ---------- */
-pres.defineSlideMaster({ title:"COVER", background:{ color:H.accent1 }, objects:[
-  { placeholder:{ options:{ name:"title", type:"title", align:"left", x:0.6, y:1.55, w:8.8, h:1.5, fontSize:40, bold:true, color:C.text1, valign:"top", margin:0 }, text:"" } },
-  { placeholder:{ options:{ name:"body", type:"body", x:0.6, y:3.2, w:8.8, h:0.9, fontSize:18, color:C.text2, valign:"top", margin:0 }, text:"" } } ]});
+pres.defineSlideMaster({ title:"COVER", background:{ color:H.lt1 }, objects:[
+  { placeholder:{ options:{ name:"title", type:"title", align:"left", x:0.6, y:1.45, w:5.3, h:1.75, fontSize:44, bold:true, color:C.text1, valign:"top", margin:0 }, text:"" } },
+  { placeholder:{ options:{ name:"body", type:"body", x:0.6, y:3.4, w:5.3, h:0.4, fontSize:16, color:C.accent6, valign:"top", margin:0 }, text:"" } } ]});
 pres.defineSlideMaster({ title:"SECTION", background:{ color:H.dk2 }, objects:[
   { placeholder:{ options:{ name:"title", type:"title", align:"left", x:3.3, y:1.5, w:6.1, h:1.1, fontSize:34, bold:true, color:C.background1, valign:"top", margin:0 }, text:"" } },
   { placeholder:{ options:{ name:"body", type:"body", x:3.3, y:2.75, w:6.1, h:2.0, fontSize:16, color:C.accent3, valign:"top", margin:0, paraSpaceAfter:8 }, text:"" } } ]});
@@ -53,8 +53,7 @@ const table = (s, rows, colW, y, o = {}) => s.addTable(rows.map((r, ri) => r.map
     align:ri === 0 ? "center" : "left", valign:"middle", fontSize:14, margin:[4, 8, 4, 8] } }))),
   { x:0.5, y, w:colW.reduce((a, b) => a + b, 0), colW, border:{ type:"solid", color:H.accent3, pt:0.75 }, rowH:o.rowH, objectName:"표" });
 const divider = (n, title, lines, notes) => { const s = pres.addSlide({ masterName:"SECTION", sectionTitle:sec });
-  s.addText(String(n), { isTextBox:true, x:0.6, y:1.1, w:2.4, h:2.6, fontSize:150, bold:true, color:C.accent1, margin:0, valign:"middle", objectName:"차시 번호" });
-  T(s, "차시", { x:0.7, y:3.75, w:2, h:0.4, fontSize:20, bold:true, color:C.accent3 });
+  s.addText(String(n), { isTextBox:true, x:0.6, y:1.1, w:2.4, h:2.6, fontSize:150, bold:true, color:C.accent1, margin:0, valign:"middle", objectName:"번호" });
   s.addText(title, { placeholder:"title" });
   s.addText(lines.map((t, i) => ({ text:t, options:{ bullet:true, breakLine:i < lines.length - 1 } })), { placeholder:"body" });
   if (notes) s.addNotes(notes); };
@@ -66,36 +65,43 @@ const practice = (n, title, goal, steps, check, notes) => { const s = slide("PRA
 /* ================= 도입 ================= */
 section("도입");
 { const s = pres.addSlide({ masterName:"COVER", sectionTitle:sec });
-  T(s, "2026 중등 AI·디지털 기반 역량강화 직무연수 [심화]  ·  2단계 서·논술형 평가 워크숍", { x:0.6, y:0.55, w:8.8, h:0.3, fontSize:13, bold:true, color:C.text2 });
-  s.addText("AI 시대의 서·논술형 평가", { placeholder:"title" });
-  s.addText("결과가 아니라 과정을 평가하는 수행평가 설계", { placeholder:"body" });
-  [["1","평가 목적 재정립"],["2","채점기준 개발과 점검"],["3","쓰기 과정과 피드백"]].forEach(([n, t], i) => { const x = 0.6 + i * 2.95;
-    num(s, n, x, 4.45, 0.42, C.text2); T(s, t, { x:x + 0.55, y:4.45, w:2.3, h:0.42, fontSize:15, bold:true, valign:"middle" }); });
-  s.addNotes("3차시 워크숍. 관점을 바꾸고, 사례를 보고, 직접 설계해 보는 순서로 진행합니다."); }
+  const E = (x, y, d, fill, tr) => s.addShape(pres.ShapeType.ellipse, { x, y, w:d, h:d, fill:{ color:fill, transparency:tr || 0 }, line:{ color:fill, width:0, transparency:100 }, objectName:"배경 원" });
+  E(5.5, -1.0, 6.4, C.background2); E(6.9, 2.3, 4.6, C.accent3, 35); E(4.85, 4.35, 0.9, C.accent1, 15); E(9.0, 0.35, 0.5, C.accent1);
+  // 답안지와 채점기준표를 닮은 그림
+  s.addShape(pres.ShapeType.roundRect, { x:6.35, y:0.95, w:2.75, h:3.75, fill:{ color:C.background1 }, line:{ color:H.accent3, width:0.75 }, rectRadius:0.1, shadow:{ type:"outer", color:H.dk2, opacity:0.18, blur:10, offset:3, angle:90 }, objectName:"답안지" });
+  const bar = (x, y, w, fill, h = 0.11) => s.addShape(pres.ShapeType.roundRect, { x, y, w, h, fill:{ color:fill }, line:{ color:fill, width:0 }, rectRadius:0.05, objectName:"줄" });
+  bar(6.6, 1.25, 1.1, C.accent2, 0.16);
+  [2.2, 2.0, 2.25, 1.6].forEach((w, i) => bar(6.6, 1.65 + i * 0.25, w, C.accent3));
+  [[1.45, C.accent2], [1.15, C.accent1], [1.35, C.accent2]].forEach(([w, f], i) => { const y = 2.95 + i * 0.5;
+    s.addText("✓", { shape:pres.ShapeType.ellipse, x:6.6, y, w:0.32, h:0.32, fill:{ color:f }, line:{ color:f, width:0 }, color:C.background1, bold:true, fontSize:12, align:"center", valign:"middle", margin:0, objectName:"점검" });
+    bar(7.08, y + 0.1, w, C.accent3); });
+  s.addShape(pres.ShapeType.roundRect, { x:5.45, y:3.25, w:1.75, h:1.15, fill:{ color:C.text2 }, line:{ color:C.text2, width:0 }, rectRadius:0.1, shadow:{ type:"outer", color:H.dk2, opacity:0.2, blur:8, offset:2, angle:90 }, objectName:"수준 카드" });
+  [["상", 1.0, C.accent1], ["중", 0.7, C.accent3], ["하", 0.4, C.background1]].forEach(([t, w, f], i) => { const y = 3.4 + i * 0.3;
+    T(s, t, { x:5.6, y, w:0.25, h:0.24, fontSize:11, bold:true, color:C.background1, valign:"middle" }); bar(5.9, y + 0.06, w, f, 0.12); });
+  s.addText("2026 중등 AI·디지털 기반 역량강화 직무연수 [심화] 7기", { shape:pres.ShapeType.roundRect, rectRadius:0.15, x:0.6, y:0.65, w:4.75, h:0.36, fill:{ color:C.background2 }, line:{ color:C.background2, width:0 }, fontSize:12, bold:true, color:C.text2, align:"center", valign:"middle", margin:0, objectName:"연수명" });
+  s.addText([{ text:"AI 활용", options:{ breakLine:true } }, { text:"서·논술형 평가", options:{ color:C.text2 } }], { placeholder:"title" });
+  s.addText("평가 목적, 채점기준, 쓰기 과정과 피드백", { placeholder:"body" });
+  T(s, "2026. 12. 3.(목) 17:00~19:50", { x:0.6, y:4.45, w:4.6, h:0.3, fontSize:14, color:C.accent6 });
+  T(s, "수도여자고등학교 교사 김수경", { x:0.6, y:4.75, w:4.6, h:0.32, fontSize:16, bold:true, color:C.text1 }); }
 
-{ const s = slide("CONTENT", "오늘의 흐름", "차시마다 강의와 실습을 절반씩. 끝나면 각자 설계안 한 세트를 들고 갑니다.");
-  [["1차시","무엇을 평가할까",["평가 목적 재정립","결과에서 과정으로","성취기준에서 과제로"]],
-   ["2차시","어떻게 채점할까",["채점기준 개발","변별력 점검","타당성 점검"]],
-   ["3차시","과정을 어떻게 볼까",["쓰기 과정 수업","AI 활용 허용 범위","AI 활용 피드백"]]].forEach(([k, h, items], i) => { const x = 0.5 + i * 3.1;
-    box(s, x, 1.3, 2.8, 2.65, C.background2); T(s, k, { x:x + 0.2, y:1.45, w:2.4, h:0.3, fontSize:13, bold:true, color:C.accent2 });
-    T(s, h, { x:x + 0.2, y:1.78, w:2.4, h:0.4, fontSize:19, bold:true, color:C.text2 }); bullets(s, items, { x:x + 0.2, y:2.4, w:2.4, h:1.45 }); });
-  callout(s, "오늘 만드는 것: 내 교과 서·논술형 평가 설계안 한 세트"); }
+{ const s = slide("CONTENT", "오늘의 흐름", "");
+  [["1","무엇을 평가할까",["평가 목적 재정립","결과에서 과정으로","성취기준에서 과제로"]],
+   ["2","어떻게 채점할까",["채점기준 개발","변별력 점검","타당성 점검"]],
+   ["3","과정을 어떻게 볼까",["쓰기 과정 수업","AI 활용 허용 범위","AI 활용 피드백"]]].forEach(([k, h, items], i) => { const x = 0.5 + i * 3.1;
+    box(s, x, 1.3, 2.8, 3.4, C.background2); num(s, k, x + 0.2, 1.5, 0.55);
+    T(s, h, { x:x + 0.2, y:2.25, w:2.4, h:0.4, fontSize:19, bold:true, color:C.text2 }); bullets(s, items, { x:x + 0.2, y:2.9, w:2.4, h:1.6, fontSize:15 }); }); }
 
-{ const s = slide("CONTENT", "AI가 글을 써 주는 교실", "기존 서·논술형 과제를 AI에 넣으면 그럴듯한 답이 나온다는 점에서 출발합니다.");
-  box(s, 0.5, 1.3, 3.9, 3.5, C.text2); T(s, "우리는 지금\n무엇을 평가하고\n있을까", { x:0.8, y:1.75, w:3.3, h:2.2, fontSize:28, bold:true, color:C.background1 });
-  T(s, "완성된 글만 받는 평가는 글을 쓴 사람이 누구인지 답하지 못합니다.", { x:0.8, y:3.75, w:3.3, h:0.85, fontSize:14, color:C.accent3 });
-  [["결과물만으로는 알 수 없다","잘 쓴 글이 학생의 생각인지, AI의 문장인지 구별하기 어렵습니다."],
-   ["금지와 적발로는 풀리지 않는다","탐지 도구는 정확하지 않고, 학생과의 신뢰를 해칩니다."],
-   ["평가 설계를 바꾸면 된다","AI를 쓰더라도 학생의 생각이 드러나도록 과제와 채점기준을 짭니다."]].forEach(([h, b], i) => { const y = 1.3 + i * 1.2;
+{ const s = slide("CONTENT", "AI가 글을 써 주는 교실", "");
+  s.addImage({ path:__dirname + "/ebs.png", x:0.5, y:1.3, w:3.9, h:2.1, altText:"EBS 다큐프라임 생각의 멸종 1부 장면. 자막: AI와 함께 푼 수학 문제, 실력도 늘었을까?", objectName:"EBS 장면" });
+  T(s, "출처: EBS 다큐프라임 〈생각의 멸종〉 1부", { x:0.5, y:3.46, w:3.9, h:0.22, fontSize:10, color:C.accent6 });
+  box(s, 0.5, 3.8, 3.9, 1.0, C.text2); T(s, "우리는 지금 무엇을\n평가하고 있을까", { x:0.75, y:3.8, w:3.4, h:1.0, fontSize:20, bold:true, color:C.background1, valign:"middle" });
+  [["AI와 함께하면 과제는 풀린다","수학 문제도, 글쓰기도 AI가 그럴듯한 답을 내놓습니다. 실력도 함께 늘었을까요?"],
+   ["결과물만으로는 알 수 없다","잘 쓴 글이 학생의 생각인지, AI의 문장인지 구별하기 어렵습니다."],
+   ["생각이 드러나는 평가가 필요하다","학생이 무엇을 이해하고 어떻게 판단했는지 볼 수 있어야 합니다."]].forEach(([h, b], i) => { const y = 1.3 + i * 1.2;
     num(s, i + 1, 4.75, y + 0.05); T(s, h, { x:5.35, y, w:4.15, h:0.4, fontSize:17, bold:true, color:C.text2 }); T(s, b, { x:5.35, y:y + 0.43, w:4.15, h:0.65 }); }); }
 
-{ const s = slide("CONTENT", "이 워크숍이 다루는 범위", "지필 문항도 AI로 만들 수 있냐는 질문이 나올 수 있어 범위를 먼저 밝힙니다.");
-  card(s, 0.5, 1.3, 4.35, 2.75, "다루는 것: 수행평가 속 서·논술형", null); bullets(s, ["수업 시간에 여러 차시에 걸쳐 쓰는 글","계획서, 조사 기록, 초고 같은 과정 기록","피드백을 받고 고쳐 쓰는 활동","학생이 AI를 쓰는 범위 정하기"], { x:0.7, y:1.95, w:3.95, h:2.0 });
-  card(s, 5.15, 1.3, 4.35, 2.75, "다루지 않는 것: 지필평가 문항 출제", null, { fill:C.accent5, hc:C.accent4 }); bullets(s, ["출제 중인 문항을 외부 AI에 넣으면 시험 보안 문제가 생깁니다","시험 시간에는 AI 허용 범위나 고쳐 쓰기를 다룰 수 없습니다"], { x:5.35, y:1.95, w:3.95, h:2.0 });
-  callout(s, "AI는 문항을 대신 만드는 도구가 아니라, 평가가 놓인 환경입니다"); }
-
 /* ================= 1차시 ================= */
-section("1차시 평가 목적 재정립");
+section("1 평가 목적 재정립");
 divider(1, "평가 목적 재정립", ["서·논술형 평가는 왜 하는가","결과 평가에서 과정 평가로","성취기준에서 과제와 채점기준으로"]);
 
 { const s = slide("CONTENT", "서·논술형 평가는 왜 하는가", "2022 개정 교육과정 총론: 수행평가를 내실화하고 서술형과 논술형 평가의 비중을 확대한다.");
@@ -123,7 +129,7 @@ divider(1, "평가 목적 재정립", ["서·논술형 평가는 왜 하는가",
   callout(s, "평가하려는 능력은 학생 몫으로 남깁니다"); }
 
 { const s = slide("CONTENT", "성취기준에서 채점기준까지 한 줄로", "다섯 칸이 같은 평가 요소로 이어지는지가 타당도의 출발점입니다.");
-  [["성취기준","무엇을 배워야\n하는가"],["평가 요소","무엇을\n볼 것인가"],["수행 과제","어떤 글을\n쓰게 할 것인가"],["채점기준","어떤 수준으로\n판단할 것인가"],["피드백","다음에 무엇을\n할 것인가"]].forEach(([h, q], i) => { const x = 0.5 + i * 1.84;
+  [["성취기준","무엇을 배워야\n하는가"],["평가 요소","무엇을\n볼 것인가"],["과제","어떤 글을\n쓰게 할 것인가"],["채점기준","어떤 수준으로\n판단할 것인가"],["피드백","다음에 무엇을\n할 것인가"]].forEach(([h, q], i) => { const x = 0.5 + i * 1.84;
     box(s, x, 1.5, 1.58, 0.75, i === 1 ? C.accent4 : C.text2); T(s, h, { x, y:1.5, w:1.58, h:0.75, fontSize:17, bold:true, color:C.background1, align:"center", valign:"middle" });
     if (i < 4) arrow(s, x + 1.58, 1.74); T(s, q, { x, y:2.45, w:1.58, h:0.9, align:"center" }); });
   box(s, 0.5, 3.55, 9, 1.25, C.background2); T(s, [{ text:"평가 요소가 축입니다. ", options:{ bold:true, color:C.accent4 } }, { text:"과제의 발문과 조건, 채점기준의 채점 요소, 피드백의 관점이 모두 같은 평가 요소에서 나와야 가르친 것을 평가하게 됩니다." }], { x:0.75, y:3.55, w:8.5, h:1.25, fontSize:15, valign:"middle" }); }
@@ -135,7 +141,7 @@ divider(1, "평가 목적 재정립", ["서·논술형 평가는 왜 하는가",
   bullets(s, ["모든 내용을 넣지 않고 핵심만 고릅니다","학생이 하는 행동이 드러나는 명사형 어구로 씁니다 (예: 쟁점 분석하기)","요소끼리 겹치거나 모호하지 않게 구분합니다","과제의 발문과 조건에 그대로 반영합니다"], { x:4.5, y:1.8, w:5, h:2.7 });
   source(s); }
 
-{ const s = slide("CONTENT", "수행 과제의 구조", "발문, 자료, 조건은 지필 문항과 같지만, 수행평가에서는 과정 산출물이 하나 더 붙습니다.");
+{ const s = slide("CONTENT", "서·논술형 과제의 구조", "");
   [["발문","무엇을 어떻게 쓸지 알려 줍니다. 설명, 비교, 분석, 논하시오 같은 반응 지시어를 분명하게 씁니다."],
    ["자료","교사가 주는 제시문과 통계, 또는 학생이 직접 조사한 자료를 씁니다."],
    ["조건","내용, 형식, 분량 조건을 3~5개로 제한합니다. 정답을 암시하지 않게 씁니다."]].forEach(([h, b], i) => card(s, 0.5 + i * 2.3, 1.3, 2.1, 3.3, h, b));
@@ -149,12 +155,8 @@ divider(1, "평가 목적 재정립", ["서·논술형 평가는 왜 하는가",
    ["선택한 이유를 설명하게 한다","왜 이 근거를 골랐고 무엇을 버렸는지 쓰게 합니다."]].forEach(([h, b], i) => { const x = 0.5 + (i % 2) * 4.65, y = 1.3 + Math.floor(i / 2) * 1.75;
     box(s, x, y, 4.35, 1.55, C.background2); num(s, i + 1, x + 0.2, y + 0.2); T(s, h, { x:x + 0.8, y:y + 0.2, w:3.4, h:0.42, fontSize:16, bold:true, color:C.text2, valign:"middle" }); T(s, b, { x:x + 0.8, y:y + 0.72, w:3.4, h:0.75 }); }); }
 
-practice(1, "평가 요소와 과제 초안 쓰기", "내 교과의 성취기준 하나로 수행 과제의 뼈대를 만듭니다.",
-  [["성취기준 고르기","이번 학기 또는 다음 학기에 실제로 쓸 성취기준 하나"],["평가 요소 정하기","서·논술형으로 볼 핵심 요소 2~3개를 명사형 어구로"],["발문·자료·조건 쓰기","반응 지시어와 조건을 평가 요소에 맞춰"],["과정 산출물 정하기","단계마다 무엇을 받을지"]],
-  "이 과제를 AI에 그대로 넣으면 어떤 글이 나올까요? 그 글에 없는 것이 학생에게서 보고 싶은 것입니다.", "개인 작성 15분, 짝과 공유 5분.");
-
 /* ================= 2차시 ================= */
-section("2차시 채점기준 개발과 점검");
+section("2 채점기준 개발과 점검");
 divider(2, "채점기준 개발과 점검", ["채점기준의 구성과 유형","채점기준 작성 지침","변별력과 타당성 점검"]);
 
 { const s = slide("CONTENT", "채점기준은 세 단계로 만든다", "예시답안을 함께 쓰면 수준을 나누기가 쉬워집니다.");
@@ -165,9 +167,9 @@ divider(2, "채점기준 개발과 점검", ["채점기준의 구성과 유형",
     if (i < 2) arrow(s, x + 2.82, 2.8); });
   source(s); }
 
-{ const s = slide("CONTENT", "총체적 채점과 분석적 채점", "과정 평가와 피드백이 목적이면 분석적 채점이 알맞습니다.");
+{ const s = slide("CONTENT", "총체적 채점과 분석적 채점", "");
   table(s, [["","총체적 채점","분석적 채점"],["방법","답안 전체를 보고 하나의 점수를 줌","채점 요소마다 점수를 주고 합산함"],["장점","채점이 빠름","구체적인 피드백이 가능하고 일관성을 지키기 쉬움"],
-    ["단점","세부 피드백이 어렵고 채점자마다 달라지기 쉬움","개발과 채점에 시간이 듦"],["알맞은 경우","요소로 나누기 어려운 글","과정 평가, 피드백이 중요한 수행평가"]], [1.6, 3.7, 3.7], 1.3, { rowH:0.62 });
+    ["단점","세부 피드백이 어렵고 채점자마다 달라지기 쉬움","개발과 채점에 시간이 듦"],["알맞은 경우","요소로 나누기 어려운 글","과정과 피드백이 중요한 평가"]], [1.6, 3.7, 3.7], 1.3, { rowH:0.62 });
   source(s); }
 
 { const s = slide("CONTENT", "분석적 채점기준 예시", "논술형 과제의 일반적인 예. 마지막 요소가 AI 시대에 덧붙는 부분입니다.");
@@ -181,7 +183,7 @@ divider(2, "채점기준 개발과 점검", ["채점기준의 구성과 유형",
    ["부분점수 인정","예시답안 밖의 답을 모두 0점 처리하지 않습니다."],["무관한 감점 금지","평가 목표가 아닌 필체, 맞춤법으로 깎지 않습니다."],["학생에게 공개","채점기준이 학습의 기준이 되게 합니다."]].forEach(([h, b], i) => card(s, 0.5 + (i % 3) * 3.1, 1.3 + Math.floor(i / 3) * 1.75, 2.8, 1.55, h, b));
   source(s); }
 
-{ const s = slide("CONTENT", "변별력 점검: 수준을 구분하는가", "수행평가의 변별력은 등급을 가르는 힘이 아니라 성취수준을 구분하는 힘입니다. 가상 답안은 AI로 만들 수 있습니다.");
+{ const s = slide("CONTENT", "변별력 점검: 수준을 구분하는가", "");
   box(s, 0.5, 1.3, 3.5, 3.5, C.text2); T(s, "가상 답안으로\n미리 채점해 보기", { x:0.75, y:1.6, w:3.0, h:1.0, fontSize:22, bold:true, color:C.background1 });
   T(s, "실제 답안을 받기 전에 채점기준의 빈틈을 찾습니다. 수준별 가상 답안은 AI에게 만들게 할 수 있습니다.", { x:0.75, y:2.85, w:3.0, h:1.7, color:C.accent3 });
   [["수준별 가상 답안 준비","상, 중, 하와 두 수준 사이에 걸친 답안"],["채점기준으로 직접 채점","의도한 수준은 가리고 채점"],["점수가 갈리는지 확인","애매한 답안을 기준으로 판정할 수 있는가"],["채점기준 보완","빠진 수준이나 모호한 표현 고치기"]].forEach(([h, b], i) => { const y = 1.3 + i * 0.9;
@@ -196,12 +198,8 @@ divider(2, "채점기준 개발과 점검", ["채점기준의 구성과 유형",
    ["대비의 오류","잘 아는 내용은 박하게, 낯선 내용은 후하게 줌"],["근접의 오류","처음이나 나중 답안의 인상에 치우침"],["논리의 오류","모순된 판단이 채점에 섞임"]].forEach(([h, b], i) => card(s, 0.5 + (i % 3) * 3.1, 1.3 + Math.floor(i / 3) * 1.75, 2.8, 1.55, h, b));
   source(s); }
 
-practice(2, "채점기준 만들고 미리 채점하기", "실습 1의 과제에 맞는 분석적 채점기준을 만들고 점검합니다.",
-  [["채점 요소 정하기","평가 요소에서 2~4개, 정직한 자료 활용 포함 여부 결정"],["수준별 기준 쓰기","상, 중, 하에 답안에 있어야 할 내용을 구체적으로"],["가상 답안 채점하기","수준이 다른 가상 답안 3~5편을 직접 채점"],["채점기준 고치기","애매했던 답안을 기준으로 삼아 보완"]],
-  "옆 선생님과 같은 답안을 채점했을 때 점수가 같았나요? 달랐다면 어느 표현 때문인가요?", "개인 작성 15분, 짝과 교차 채점 10분.");
-
 /* ================= 3차시 ================= */
-section("3차시 쓰기 과정과 피드백");
+section("3 쓰기 과정과 피드백");
 divider(3, "쓰기 과정과 피드백", ["쓰기 과정 수업의 흐름","AI 활용 허용 범위 안내","AI 활용 피드백"]);
 
 { const s = slide("CONTENT", "쓰기 과정 수업의 흐름", "4차시 예시. 채점기준을 첫 시간에 공개하는 것이 중요합니다.");
@@ -232,11 +230,9 @@ divider(3, "쓰기 과정과 피드백", ["쓰기 과정 수업의 흐름","AI �
   card(s, 5.15, 2.5, 4.35, 2.3, "지킬 것", null, { fill:C.accent5, hc:C.accent4 }); bullets(s, ["채점과 점수는 교사가 합니다","이름, 학번 같은 개인정보는 넣지 않습니다","학교와 교육청이 허용한 도구를 씁니다"], { x:5.35, y:3.1, w:3.95, h:1.65, paraSpaceAfter:4 }); }
 
 { const s = pres.addSlide({ masterName:"SECTION", sectionTitle:sec });
-  T(s, "실습 3 · 마무리", { x:0.6, y:0.55, w:6, h:0.35, fontSize:14, bold:true, color:C.accent1 });
-  T(s, "내 설계안 한 세트 완성하기", { x:0.6, y:0.95, w:8.8, h:0.7, fontSize:32, bold:true, color:C.background1 });
-  [["과제","평가 요소, 발문, 자료, 조건, 과정 산출물"],["채점기준","채점 요소와 수준, 가채점 뒤 고친 점"],["AI 활용 안내문","단계별 허용 범위와 표시 방법"],["피드백 계획","언제, 누가, 무엇을 기준으로"]].forEach(([h, b], i) => { const x = 0.6 + (i % 2) * 4.5, y = 1.95 + Math.floor(i / 2) * 1.15;
-    num(s, i + 1, x, y + 0.04, 0.42, C.accent1, C.text1); T(s, h, { x:x + 0.6, y, w:3.7, h:0.38, fontSize:18, bold:true, color:C.background1 }); T(s, b, { x:x + 0.6, y:y + 0.42, w:3.7, h:0.4, color:C.accent3 }); });
-  box(s, 0.6, 4.45, 8.8, 0.65, C.accent1); T(s, "3단계에서: 이 설계안을 수업에 적용하고, 실천과 성찰을 나눕니다", { x:0.85, y:4.45, w:8.3, h:0.65, fontSize:16, bold:true, color:C.text1, valign:"middle" });
-  s.addNotes("실습 3: 안내문과 피드백 계획을 채워 설계안을 완성. 2~3명이 발표하고 마무리."); }
+  T(s, "정리", { x:0.6, y:0.55, w:6, h:0.35, fontSize:14, bold:true, color:C.accent1 });
+  T(s, "AI 활용 서·논술형 평가", { x:0.6, y:0.95, w:8.8, h:0.7, fontSize:32, bold:true, color:C.background1 });
+  [["과정을 평가한다","완성된 글과 함께 글이 만들어지는 과정을 근거로 삼습니다"],["평가 요소로 잇는다","성취기준, 과제, 채점기준, 피드백이 한 줄로 이어집니다"],["채점기준을 점검한다","수준을 구분하는지, 보려던 것을 보는지 확인합니다"],["피드백으로 돌려준다","고쳐 쓸 기회와 함께 다음에 할 일을 알려 줍니다"]].forEach(([h, b], i) => { const x = 0.6 + (i % 2) * 4.5, y = 2.0 + Math.floor(i / 2) * 1.3;
+    num(s, i + 1, x, y + 0.04, 0.42, C.accent1, C.text1); T(s, h, { x:x + 0.6, y, w:3.7, h:0.38, fontSize:18, bold:true, color:C.background1 }); T(s, b, { x:x + 0.6, y:y + 0.42, w:3.7, h:0.65, color:C.accent3 }); }); }
 
 (async () => { await pres.writeFile({ fileName:OUT }); await applyTheme(OUT, THEME); console.log("written", OUT); })();
