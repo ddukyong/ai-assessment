@@ -1,0 +1,693 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>서·논술형 AI 설계 실습</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* 레이아웃: 왼쪽에 단계 목록, 오른쪽에 한 단계씩 '입력 → 프롬프트 → AI 결과 → 교사 점검 → 확정' 순서로 쓰는 작업지 */
+:root{
+  --bg:#f3f5f8; --surface:#ffffff; --ink:#1a2330; --muted:#5a6575; --line:#d8dde5;
+  --accent:#1d4e9e; --accent-ink:#ffffff; --accent-soft:#e6edf9;
+  --pen:#c3303b; --pen-soft:#fbe9ea; --ok:#1e7a4c; --ok-soft:#e3f3ea; --warn:#9a5a00; --warn-soft:#fbf0dc;
+  --code:#f6f8fb;
+  --font:"IBM Plex Sans KR","Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",system-ui,sans-serif;
+  --r:10px;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#11151b; --surface:#19202a; --ink:#e5e9ef; --muted:#9aa5b3; --line:#2d3644;
+  --accent:#7fa7ff; --accent-ink:#0d1420; --accent-soft:#1d2a44;
+  --pen:#ff7c85; --pen-soft:#3a1f24; --ok:#5fc38f; --ok-soft:#173226; --warn:#f0b35a; --warn-soft:#3a2c14;
+  --code:#141a22; color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#11151b; --surface:#19202a; --ink:#e5e9ef; --muted:#9aa5b3; --line:#2d3644;
+  --accent:#7fa7ff; --accent-ink:#0d1420; --accent-soft:#1d2a44;
+  --pen:#ff7c85; --pen-soft:#3a1f24; --ok:#5fc38f; --ok-soft:#173226; --warn:#f0b35a; --warn-soft:#3a2c14;
+  --code:#141a22; color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:15px/1.65 var(--font);-webkit-font-smoothing:antialiased}
+[hidden]{display:none!important}
+button,input,select,textarea{font:inherit;color:inherit}
+h1,h2,h3{text-wrap:balance;line-height:1.3;margin:0}
+p{margin:0}
+a{color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--surface)}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--surface);border-bottom:1px solid var(--line);
+  padding-block:10px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.top-in{max-width:1240px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px}
+.brand{display:flex;align-items:center;gap:10px;min-width:0;margin-right:auto}
+.mark{width:34px;height:34px;border-radius:8px;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font-weight:700;font-size:15px;flex:none}
+.brand b{font-size:16px;display:block}
+.brand small{color:var(--muted);font-size:12.5px;display:block}
+.sync{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.sync .status{font-size:12.5px;color:var(--muted)}
+.sync .status.ok{color:var(--ok)} .sync .status.err{color:var(--pen)}
+
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:7px 12px;cursor:pointer;font-size:13.5px;font-weight:500;white-space:nowrap}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.danger{color:var(--pen)}
+.btn.danger.armed{background:var(--pen);border-color:var(--pen);color:#fff}
+.btn:disabled{opacity:.5;cursor:default}
+
+.banner{max-width:1240px;margin:12px auto 0;background:var(--warn-soft);color:var(--ink);border:1px solid color-mix(in srgb,var(--warn) 35%,transparent);
+  border-radius:var(--r);padding:10px 14px;font-size:14px;display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center}
+.banner b{color:var(--warn)}
+
+.wrap{padding-block:16px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.layout{max-width:1240px;margin:0 auto;display:grid;grid-template-columns:250px minmax(0,1fr);gap:20px;align-items:start}
+.rail{position:sticky;top:calc(env(safe-area-inset-top,0px) + 76px);display:flex;flex-direction:column;gap:4px}
+.rail button{all:unset;cursor:pointer;display:grid;grid-template-columns:28px 1fr auto;gap:8px;align-items:center;padding:9px 10px;border-radius:8px;font-size:14px}
+.rail button:hover{background:var(--surface)}
+.rail button.on{background:var(--surface);box-shadow:inset 3px 0 0 var(--accent);font-weight:600}
+.rail button:focus-visible{outline:2px solid var(--accent)}
+.rail .no{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-size:12.5px;font-weight:600;background:var(--accent-soft);color:var(--accent)}
+.rail button.on .no{background:var(--accent);color:var(--accent-ink)}
+.rail .tag{font-size:11.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+.rail .tag.done{color:var(--ok);font-weight:600}
+.rail .ai{font-size:11px;color:var(--accent);font-weight:600;letter-spacing:.02em}
+.rail-label{font-size:11.5px;color:var(--muted);letter-spacing:.06em;padding:4px 10px}
+
+main{min-width:0;display:flex;flex-direction:column;gap:16px}
+.head{display:flex;flex-direction:column;gap:8px}
+.eyebrow{font-size:12.5px;font-weight:600;color:var(--accent);letter-spacing:.04em}
+.head h1{font-size:24px}
+.lead{color:var(--muted);max-width:68ch}
+.roles{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px}
+.role{border-radius:var(--r);padding:10px 12px;font-size:13.5px}
+.role b{display:block;font-size:12px;letter-spacing:.04em;margin-bottom:2px}
+.role.ai{background:var(--accent-soft)} .role.ai b{color:var(--accent)}
+.role.me{background:var(--pen-soft)} .role.me b{color:var(--pen)}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.card-h{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.card-h h2{font-size:16px}
+.card-h .n{width:24px;height:24px;border-radius:6px;background:var(--ink);color:var(--surface);display:grid;place-items:center;font-size:12.5px;font-weight:700;flex:none}
+.card-h .sp{margin-left:auto}
+.hint{font-size:13px;color:var(--muted)}
+.src{font-size:12px;color:var(--muted);border-top:1px dashed var(--line);padding-top:8px}
+
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.grid .full{grid-column:1/-1}
+.f{display:flex;flex-direction:column;gap:5px;min-width:0}
+.f label{font-size:13.5px;font-weight:600}
+.f .hint{font-weight:400}
+input[type=text],input[type=password],select,textarea{width:100%;border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:8px 10px;font-size:14.5px;line-height:1.6}
+textarea{resize:vertical;min-height:80px}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+textarea.final{background:var(--surface);border-color:color-mix(in srgb,var(--pen) 45%,var(--line))}
+
+.prompt{border:1px solid var(--line);border-radius:8px;background:var(--code);overflow:hidden}
+.prompt pre{margin:0;padding:12px 14px;white-space:pre-wrap;word-break:keep-all;overflow-wrap:anywhere;font:13.5px/1.7 var(--font);max-height:340px;overflow:auto}
+.prompt .bar{display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:1px solid var(--line);font-size:12.5px;color:var(--muted)}
+.prompt .bar .btn{margin-left:auto}
+.miss{color:var(--pen);font-weight:600}
+
+.checks{display:flex;flex-direction:column;gap:12px}
+.cgroup h3{font-size:13px;color:var(--muted);font-weight:600;margin-bottom:4px;letter-spacing:.03em}
+.ck{display:grid;grid-template-columns:22px 1fr;gap:8px;align-items:start;padding:6px 4px;border-radius:6px;cursor:pointer;font-size:14px}
+.ck:hover{background:var(--bg)}
+.ck input{width:17px;height:17px;margin:3px 0 0;accent-color:var(--pen)}
+.ck .ai-flag{display:inline-block;font-size:11px;font-weight:600;color:var(--pen);background:var(--pen-soft);border-radius:4px;padding:0 5px;margin-left:4px}
+.count{font-size:12.5px;font-weight:600;padding:2px 8px;border-radius:999px;background:var(--bg);color:var(--muted);font-variant-numeric:tabular-nums}
+.count.done{background:var(--ok-soft);color:var(--ok)}
+
+.tbl-wrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{border-bottom:1px solid var(--line);padding:8px;text-align:left;vertical-align:top}
+th{font-size:12.5px;color:var(--muted);font-weight:600;white-space:nowrap}
+td input[type=text],td select{min-width:110px}
+.seg{display:flex;flex-wrap:wrap;gap:6px}
+.seg label{display:flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:4px 11px;font-size:13.5px;cursor:pointer}
+.seg input{accent-color:var(--accent)}
+.toggles{display:flex;flex-direction:column;gap:6px}
+
+.notice{border:1px solid var(--line);border-radius:8px;padding:14px;background:var(--bg);white-space:pre-wrap;font-size:14px}
+.warn{background:var(--warn-soft);border-radius:8px;padding:10px 12px;font-size:13.5px}
+.warn b{color:var(--warn)}
+
+.nav{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+
+.sum{display:flex;flex-direction:column;gap:14px}
+.sum section{border-top:1px solid var(--line);padding-top:12px;display:flex;flex-direction:column;gap:6px}
+.sum h3{font-size:14.5px}
+.sum .body{white-space:pre-wrap;font-size:14px}
+.sum .empty{color:var(--muted);font-size:13.5px}
+.meter{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px}
+.meter div{background:var(--bg);border-radius:8px;padding:8px;font-size:12px;text-align:center;font-variant-numeric:tabular-nums}
+.meter div b{display:block;font-size:16px}
+.meter div.done{background:var(--ok-soft);color:var(--ok)}
+
+.modal{position:fixed;inset:0;background:rgb(0 0 0/.45);display:grid;place-items:center;z-index:20;padding:16px}
+.modal .box{background:var(--surface);border-radius:var(--r);padding:16px;width:min(640px,100%);display:flex;flex-direction:column;gap:10px}
+.modal textarea{min-height:240px}
+.login{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+
+@media (max-width:880px){
+  .layout{grid-template-columns:minmax(0,1fr)}
+  .rail{position:static;flex-direction:row;overflow-x:auto;gap:6px;padding-bottom:4px}
+  .rail-label{display:none}
+  .rail button{grid-template-columns:24px auto;white-space:nowrap;background:var(--surface);border:1px solid var(--line)}
+  .rail button .tag,.rail button .ai{display:none}
+  .rail button.on{box-shadow:inset 0 -3px 0 var(--accent)}
+}
+@media (max-width:560px){
+  .grid,.roles,.login{grid-template-columns:minmax(0,1fr)}
+  .meter{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .head h1{font-size:21px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="top-in">
+    <div class="brand">
+      <span class="mark" aria-hidden="true">서</span>
+      <div><b>서·논술형 AI 설계 실습</b><small>성취기준에서 피드백까지, AI는 초안을 만들고 판단은 교사가</small></div>
+    </div>
+    <div class="sync">
+      <span class="status" id="syncStatus">이 브라우저에 자동 저장 중</span>
+      <button class="btn" id="btnLogin" type="button">시트에 연결</button>
+      <button class="btn primary" id="btnSave" type="button" hidden>시트에 저장</button>
+      <button class="btn danger" id="btnReset" type="button">새로 시작</button>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="banner" id="sampleBanner" hidden>
+    <span><b>예시 설계안</b> 공간 불평등 정책 제안서 수업(Q-메이커스 5·6차시)으로 채워져 있어요. 과목·성취기준 문구는 예시이니 실제 것으로 바꿔 주세요. 내 설계를 하려면 오른쪽 위 <b>새로 시작</b>을 누르세요.</span>
+  </div>
+  <div class="layout" style="margin-top:16px">
+    <nav class="rail" id="rail" aria-label="실습 단계"></nav>
+    <main id="main"></main>
+  </div>
+</div>
+
+<div class="modal" id="loginModal" hidden>
+  <form class="box" id="loginForm">
+    <h2 style="font-size:17px">구글 시트에 연결하기</h2>
+    <p class="hint">연결하면 설계안이 연수 시트에 저장되고, 다른 기기에서도 같은 이름과 비밀번호로 이어서 할 수 있어요. 같은 이름이 있으면 이름 뒤에 학교를 붙여 주세요(예: 김민수_한빛고).</p>
+    <div class="login">
+      <div class="f"><label for="lgCode">연수 코드</label><input type="text" id="lgCode" autocomplete="off"></div>
+      <div class="f"><label for="lgName">이름</label><input type="text" id="lgName" maxlength="20" autocomplete="off"></div>
+      <div class="f"><label for="lgPin">비밀번호 (숫자 4자리)</label><input type="password" id="lgPin" inputmode="numeric" maxlength="4" autocomplete="off"></div>
+    </div>
+    <p class="hint" id="lgMsg"></p>
+    <div class="nav">
+      <button class="btn" type="button" id="lgCancel">닫기</button>
+      <button class="btn primary" type="submit" id="lgGo">연결하고 불러오기</button>
+    </div>
+  </form>
+</div>
+
+<div class="modal" id="copyModal" hidden>
+  <div class="box">
+    <h2 style="font-size:17px">아래 내용을 복사해 주세요</h2>
+    <p class="hint">자동 복사가 막힌 환경이에요. 글이 선택되어 있으니 Ctrl+C(맥은 ⌘+C)로 복사하세요.</p>
+    <textarea id="copyArea" readonly></textarea>
+    <div class="nav"><span></span><button class="btn primary" type="button" id="copyClose">닫기</button></div>
+  </div>
+</div>
+
+<script>
+/* ===== 연수 담당자가 바꾸는 곳 ===== */
+const SERVER_URL = "";        // Apps Script 웹 앱 주소(…/exec). 비워 두면 이 브라우저에만 저장됨
+const COURSE_CODE_HINT = "";  // 연수 코드를 미리 채워 두려면 입력 (Code.gs의 COURSE_CODES와 같게)
+/* ================================== */
+
+const KEY = "seonon-ai-lab-v1";
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[c]));
+
+/* ----- 상태 ----- */
+const H5 = () => [
+  { stage:"질문·주제 정하기", use:"no", cond:"" },
+  { stage:"자료 조사", use:"ok", cond:"AI 활용 표시, 수치는 원래 출처에서 확인" },
+  { stage:"개념 정의·해석", use:"no", cond:"" },
+  { stage:"개요 짜기", use:"cond", cond:"" },
+  { stage:"초고 쓰기", use:"no", cond:"" },
+  { stage:"고쳐 쓰기·점검", use:"cond", cond:"다 쓴 뒤 논리가 끊긴 곳 지적만 받기" }
+];
+const blank = () => ({
+  step:0, sample:false,
+  s0:{ level:"고등학교", grade:"", subject:"", code:"", std:"", levels:"", context:"" },
+  s1:{ ai:"", final:"" },
+  s2:{ type:"논술형", situation:"", data:"", points:"", length:"", ai:"", q:"", d:"", c:"" },
+  s3:{ mode:"분석적", n:"3", ai:"", final:"" },
+  s4:{ ai:"", rows:[{},{},{},{},{}], final:"", fix:"" },
+  s5:{ rows:H5(), mark:true, honest:true, self:true, ai:"", final:"" },
+  s6:{ ans:"", n:"2", len:"300자", ai:"", final:"" },
+  checks:{}
+});
+
+const RUB = [
+  ["문제 진단 — 사례와 근거",4,[[4,"상","분만·응급의료 외의 사례를 구체적 수치와 믿을 만한 출처(기관·연도)로 제시함"],[2,"중","사례와 수치는 있으나 출처가 불분명하거나 근거가 일부만 제시됨"],[1,"하","사례가 막연하거나 수치·출처 없이 주장만 함"]]],
+  ["개념 적용 — 공간 불평등 판단",4,[[4,"상","단순한 지역 차이와 구별하여 생활의 필요, 기회·부담의 차이, 구조적 원인을 모두 들어 공간 불평등임을 설명함"],[2,"중","세 요소 중 일부만 들어 설명하거나 지역 차이와 구별이 분명하지 않음"],[1,"하","공간 불평등에 해당하는 이유를 설명하지 못함"]]],
+  ["제도적 방안 — 원인과의 연결",4,[[4,"상","진단한 구조적 원인과 직접 이어지는 제도를 주체·대상·방법까지 구체적으로 제안하고 필요한 이유를 근거로 씀"],[2,"중","제도는 제안했으나 원인과의 연결이나 구체성이 부족함"],[1,"하","막연한 구호 수준(‘지원을 늘린다’)에 그침"]]],
+  ["시민 실천 방안",3,[[3,"상","내가(우리가) 실제로 할 수 있는 실천을 구체적으로 제안하고 필요한 이유를 근거로 씀"],[2,"중","실천은 제안했으나 구체성이나 이유가 부족함"],[1,"하","실천 방안이 막연하거나 빠짐"]]],
+  ["진로 연결과 성찰",2,[[2,"상","탐구 과정과 제안을 내 진로(관심) 분야의 지식·역할과 구체적으로 연결함"],[1,"중·하","진로와의 연결이 형식적이거나 빠짐"]]],
+  ["정직한 자료 활용 — 출처·AI 활용 표시·스스로 쓴 해석",3,[[3,"상","모든 자료의 출처를 밝히고, AI를 쓴 곳을 표시했으며, 해석과 논증을 스스로 씀"],[2,"중","출처나 AI 활용 표시가 일부 빠짐"],[1,"하","출처 없이 옮겨 쓰거나 AI가 쓴 문장을 그대로 사용함"]]]
+];
+const sample = () => {
+  const s = blank();
+  s.sample = true;
+  s.s0 = { level:"고등학교", grade:"1학년", subject:"통합사회(예시)", code:"[예시]",
+    std:"공간 불평등 현상의 사례를 조사하여 구조적 원인을 분석하고, 이를 완화하기 위한 제도적 방안과 시민으로서의 실천 방안을 제안한다.",
+    levels:"",
+    context:"1~4차시 모둠 탐구(질문 만들기 → 하위 질문·조사 → 발표)로 분만·응급의료 취약지 사례를 다룬 뒤, 5·6차시에 학생마다 새 사례를 골라 자기주도 탐구를 하고 정책 제안서를 쓴다. 자료 조사에는 AI를 쓸 수 있고, 계획서는 구역별로 교사 피드백을 받아 고친다." };
+  s.s1.final = "① 공간 불평등 사례를 수치와 출처로 진단하기\n② 단순한 지역 차이와 구별하여 공간 불평등임을 판단하기 (생활의 필요, 기회·부담의 차이, 구조적 원인)\n③ 구조적 원인과 이어지는 제도적 방안 제안하기\n④ 시민으로서 실천할 수 있는 방안 제안하기";
+  Object.assign(s.s2, { type:"논술형", situation:"학생이 직접 탐구한 공간 불평등 사례로 정책 제안서 쓰기",
+    data:"자료를 따로 주지 않음 (학생이 조사한 자료 활용)", points:"20", length:"칸별 3,000자 이내",
+    q:"자신이 탐구한 공간 불평등 사례 1가지를 바탕으로 『공간 불평등 완화를 위한 제도 및 시민 실천 제안서』를 쓰시오. (20점)",
+    d:"자료를 따로 제시하지 않음. 학생이 5·6차시에 조사해 기록한 자료(조사 내용, 출처, 해석)를 활용함.",
+    c:"· 분만·응급의료 취약지가 아닌 사례를 구체적 사실(수치 등)·출처와 함께 제시하고, 단순한 지역 차이와 구별하여 공간 불평등에 해당하는 이유를 설명할 것\n· 구조적 원인을 고려하여 제도적 방안 한 가지와 시민으로서의 실천 방안 한 가지를 구체적으로 제안하고, 각각 필요한 이유를 근거를 들어 쓸 것\n· 이 탐구와 제안이 내 진로와 어떻게 이어지는지 쓸 것\n· 칸별 3,000자 이내 (진로 연결은 2,000자 이내)" });
+  s.s3.mode = "분석적";
+  s.s3.final = "[분석적 채점 · 총 20점]\n" + RUB.map(([n, p, lv], i) => `${i + 1}. ${n} (${p}점)\n` + lv.map(([sc, l, t]) => `   ${sc}점 ${l}: ${t}`).join("\n")).join("\n");
+  return s;
+};
+
+let S;
+const load = () => { try { const t = localStorage.getItem(KEY); if (t) return Object.assign(blank(), JSON.parse(t)); } catch(e){} return null; };
+const saveLocal = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch(e){} };
+S = load() || sample();
+
+const get = p => p.split(".").reduce((o, k) => o == null ? o : o[k], S);
+const set = (p, v) => { const ks = p.split("."); let o = S; ks.slice(0, -1).forEach(k => { if (o[k] == null) o[k] = {}; o = o[k]; }); o[ks.at(-1)] = v; };
+const v = (p, ph) => { const t = String(get(p) ?? "").trim(); return t || `⟦${ph}⟧`; };
+const plain = t => t.replace(/⟦/g, "[").replace(/⟧/g, "]");
+
+/* ----- 단계 정의 ----- */
+const SRC = {
+  I:"모듈 I 서·논술형 평가에 대한 이해", II:"모듈 II 서·논술형 평가 문항 계획하기", III:"모듈 III 서·논술형 평가 문항 개발하기",
+  IV:"모듈 IV 서·논술형 평가 채점기준 및 예시답안 개발하기", V:"모듈 V 서·논술형 평가 채점 및 피드백하기"
+};
+const srcLine = (...m) => `<p class="src">점검 항목 출처: ${m.map(k => SRC[k]).join(" · ")} (교육부·17개 시·도교육청·한국교육과정평가원 연수 자료, 일부 재구성)${m.length ? " · 표시가 붙은 항목은 AI 결과물 점검을 위해 덧붙임" : ""}</p>`;
+
+const CHECKS = {
+  1:[["평가 요소",[
+      "성취기준 범위를 벗어난 요소가 없다",
+      "지식·이해, 과정·기능, 가치·태도 가운데 무엇을 평가할지 정했다",
+      "모든 내용을 넣지 않고 핵심 요소만 골랐다",
+      "학생이 하는 행동이 드러나는 명사형 어구로 썼다",
+      "평가 요소끼리 겹치거나 모호하지 않다",
+      "단순 기억·재생 수준이 아닌 요소를 골랐다",
+      "발문·자료·조건에 그대로 반영할 수 있다",
+      ["AI가 덧붙인 요소 중 우리 수업에서 다루지 않은 것은 뺐다", 1]]]],
+  2:[["발문",[
+      "평가 요소가 발문에 분명하게 드러난다",
+      "반응 지시어(설명하시오, 비교하시오, 논하시오 등)가 구체적이다",
+      "답안의 형식이 분명하게 제시되어 있다",
+      "정답에 들어갈 핵심 단어가 발문에 없다",
+      "배점이 문장 끝에 표시되어 있다"]],
+    ["자료",[
+      ["AI가 쓴 수치·기사·인용을 원래 출처에서 확인했다 (확인 안 되면 뺌)", 1],
+      "학문적·사실적 오류나 정치적·사회적 논란의 소지가 없다",
+      "문항 시간에 맞는 분량과 난이도다",
+      "답에 필요하지 않은 정보가 들어 있지 않다",
+      "평가 요소, 자료, 발문이 서로 이어진다"]],
+    ["조건",[
+      "꼭 알아야 할 핵심 조건만 있다",
+      "조건이 정답을 암시하지 않는다",
+      "주어진 시간 안에 해결할 수 있는 정도다"]],
+    ["수업과의 연결",[
+      "수업에서 실제로 다룬 내용과 수준으로 답할 수 있다",
+      ["AI가 만든 매끄러운 문장을 우리 학생 눈높이로 고쳤다", 1]]]],
+  3:[["채점기준",[
+      "채점 요소가 평가 요소·성취기준과 이어진다",
+      "배점 구간끼리 겹치지 않는다 (상호 배타적)",
+      "어떤 답안이든 한 구간에 들어간다 (포괄적)",
+      "중요하고 어려운 요소에 높은 배점을 주고, 단지 어렵다는 이유로 배점을 높이지 않았다",
+      "부분점수 기준이 있고, 예시답안 밖의 답을 모두 0점 처리하지 않는다",
+      "평가 목표가 아닌 필체·맞춤법·띄어쓰기로 감점하지 않는다",
+      "학생들의 성취수준을 구별할 수 있다",
+      "학생에게 공개해도 학습 기준으로 쓸 수 있을 만큼 분명하다",
+      "특정 학생 집단에게 불리하지 않다",
+      ["‘충분히’, ‘잘’처럼 채점자마다 다르게 읽힐 말을 답안에 있어야 할 내용으로 바꿨다", 1]]]],
+  4:[["예시답안",[
+      "출제자의 욕심을 버리고 학생 입장에서 썼다",
+      "학생이 흔히 쓰는 어휘로 썼다",
+      "문항의 조건을 모두 충족한다",
+      "관점에 따라 논리적 모순이나 학계의 공인된 이론에 어긋남이 없다",
+      "시간에 맞는 길이다"]],
+    ["가채점으로 본 변별력과 타당성",[
+      "상·중·하 답안의 점수가 뚜렷하게 갈렸다 (변별력)",
+      "내가 매긴 점수가 AI가 의도한 수준과 대체로 맞았다",
+      "애매한 답안도 채점기준으로 판정할 수 있었다 (안 되면 기준 보완)",
+      "높은 점수가 글 길이나 말솜씨가 아니라 평가 요소를 잘 수행한 답안에 갔다 (타당성)",
+      "동료와 같은 답안을 채점해 점수 차이를 확인했다",
+      "가채점에서 나온 문제를 채점기준에 반영했다"]]],
+  5:[["AI 활용 안내",[
+      "단계마다 AI를 쓸 수 있는지 학생이 헷갈리지 않게 나눴다",
+      "평가하려는 능력(해석, 판단, 논증)은 학생 몫으로 남겼다",
+      "AI를 썼을 때 무엇을 어디에 표시할지 정했다",
+      "AI가 준 수치·사실은 원래 출처에서 확인하도록 했다",
+      "안내문의 규칙이 채점기준에 반영되어 있다",
+      "학생이 읽고 바로 이해할 수 있는 말로 썼다"]]],
+  6:[["피드백 내용",[
+      "채점기준과 이어서 수행 결과와 과정을 구체적으로 썼다",
+      "핵심 1~2가지를 중심으로 분량이 적절하다",
+      "다음 단계로 나아갈 만큼 구체적이되, 대신 고쳐 써 주지 않았다",
+      "어조가 긍정적이고 학생이 스스로 학습하게 한다",
+      "학생이 피드백을 보고 무엇을 배울지 분명하다"]],
+    ["AI 피드백 점검",[
+      ["학생 답안에 실제로 없는 내용을 칭찬하거나 지적하지 않았다", 1],
+      ["근거 없는 칭찬이 지나치지 않다", 1],
+      ["학생의 입장이나 가치 판단을 하나로 몰아가지 않았다", 1],
+      ["이름·학번 등 개인정보를 AI에 넣지 않았다", 1],
+      "AI 초안을 그대로 쓰지 않고 교사가 고쳐 확정했다"]]]
+};
+const checkCount = n => { const items = (CHECKS[n] || []).flatMap(g => g[1]); const done = items.filter((_, i) => S.checks[n + "." + i]).length; return [done, items.length]; };
+
+/* ----- 프롬프트 ----- */
+const who = () => `${S.s0.level || ""} ${S.s0.grade || ""} ${S.s0.subject || ""}`.trim();
+const PROMPTS = {
+  1: () => `당신은 ${v("s0.level","학교급")} ${v("s0.subject","과목")} 교사의 평가 설계를 돕는 조수입니다.
+아래 성취기준을 분석해 서·논술형 평가의 평가 요소 후보를 뽑아 주세요.
+
+[학년] ${v("s0.grade","학년")}
+[성취기준] ${v("s0.code","성취기준 코드")} ${v("s0.std","성취기준 문장")}
+[성취수준] ${String(S.s0.levels || "").trim() || "없음"}
+[수업 맥락] ${v("s0.context","수업 맥락")}
+
+요청
+1. 성취기준을 지식·이해 / 과정·기능 / 가치·태도로 나누어 핵심 내용을 정리하세요.
+2. 서·논술형으로 평가하기 알맞은 평가 요소 후보를 5개 이내로 제시하세요.
+   - 학생이 하는 행동이 드러나는 명사형 어구로 쓰세요. (예: "○○의 구조적 원인 분석하기")
+   - 후보마다 요구하는 사고 수준(기억·이해·적용·분석·평가·창안)을 표시하세요.
+3. 단순 암기로 답할 수 있는 후보는 따로 표시하세요.
+4. 성취기준 범위를 벗어나는 요소는 넣지 마세요.
+표로 정리해 주세요.`,
+  2: () => `아래 평가 요소를 측정하는 ${v("s2.type","문항 유형")} 문항 초안을 만들어 주세요.
+
+[학교급·학년·과목] ${who() || "⟦학교급·학년·과목⟧"}
+[성취기준] ${v("s0.std","성취기준 문장")}
+[평가 요소] ${v("s1.final","1단계 확정 평가 요소")}
+[학생에게 줄 상황·소재] ${v("s2.situation","상황·소재")}
+[자료] ${v("s2.data","자료 활용 방식")}
+[배점] ${v("s2.points","배점")}점
+[답안 분량] ${v("s2.length","분량")}
+
+문항은 다음 구조로 쓰세요.
+- 발문: 평가 요소와 반응 지시어(설명하시오, 비교하시오, 논하시오 등)가 분명하게 드러나게 쓰고, 배점을 문장 끝에 표시하세요.
+- 자료: (가), (나)로 구분하세요. 실제 통계나 기사를 쓴다면 기관명과 연도를 밝히고, 확인할 수 없는 수치는 지어내지 말고 [확인 필요]로 표시하세요.
+- 조건: 내용 조건, 형식 조건, 분량 조건을 합쳐 3~5개로 쓰세요.
+
+주의
+- 발문에 정답의 핵심 단어를 넣지 마세요.
+- 조건이 정답을 암시하지 않게 하세요.
+- 수업에서 배운 내용으로 답할 수 있는 수준으로 쓰세요.
+마지막에 이 문항이 평가 요소를 각각 어떻게 측정하는지 한 줄씩 설명해 주세요.`,
+  3: () => `아래 문항의 ${v("s3.mode","채점 방식")} 채점기준표 초안을 만들어 주세요.
+
+[학교급·학년·과목] ${who() || "⟦학교급·학년·과목⟧"}
+[평가 요소] ${v("s1.final","1단계 확정 평가 요소")}
+[발문] ${v("s2.q","2단계 확정 발문")}
+[자료] ${v("s2.d","2단계 확정 자료")}
+[조건] ${v("s2.c","2단계 확정 조건")}
+[총점] ${v("s2.points","배점")}점
+[수준 수] ${v("s3.n","수준 수")}수준
+
+요청
+- ${S.s3.mode === "총체적" ? "수준별로 답안 전체의 특성을 쓰세요." : "평가 요소별로 채점 요소를 나누고, 채점 요소마다 배점과 수준별 수행 특성을 쓰세요."}
+- 각 수준의 기준은 서로 겹치지 않게, 어떤 답안이든 한 수준에 들어가도록 쓰세요.
+- '잘 설명함', '충분히'처럼 채점자마다 다르게 읽힐 말 대신, 답안에 무엇이 있어야 하는지 쓰세요.
+- 부분점수를 주는 경우와 0점 처리 기준을 쓰세요.
+- 조건을 지키지 못한 답안을 어떻게 처리할지 쓰세요.
+- 평가 목표가 아니라면 맞춤법·띄어쓰기로 감점하지 마세요.
+표로 정리해 주세요.`,
+  4: () => `아래 문항과 채점기준으로 두 가지를 만들어 주세요.
+
+[학교급·학년·과목] ${who() || "⟦학교급·학년·과목⟧"}
+[발문] ${v("s2.q","2단계 확정 발문")}
+[조건] ${v("s2.c","2단계 확정 조건")}
+[채점기준]
+${v("s3.final","3단계 확정 채점기준")}
+
+1. 수준별 예시답안
+   채점기준의 수준마다 예시답안을 쓰세요. ${v("s0.grade","학년")} 학생이 실제로 쓸 법한 어휘와 길이로 쓰고, 모범답안처럼 매끄럽게 다듬지 마세요. 유사답안으로 인정할 표현도 함께 적으세요.
+
+2. 가채점용 가상 학생 답안 5편
+   수준을 섞어 A~E로 이름 붙이세요. 그중 2편은 두 수준 사이에 걸쳐 판정하기 애매한 답안으로 만드세요.
+   답안 본문에는 수준을 쓰지 말고, 각 답안이 어느 수준을 의도했는지는 맨 마지막에 따로 밝히세요.`,
+  5: () => `아래는 서·논술형 평가에서 학생에게 줄 'AI 활용 안내문'입니다.
+${v("s0.grade","학년")} 학생이 한눈에 이해하도록 다듬어 주세요.
+- 규칙의 내용(쓸 수 있는 단계와 쓸 수 없는 단계, 표시 방법)은 바꾸지 마세요.
+- 짧은 문장과 목록으로 쓰고, 왜 이런 규칙이 있는지 한두 문장으로 덧붙여 주세요.
+
+${notice()}`,
+  6: () => `당신은 ${v("s0.subject","과목")} 교사입니다. 아래 채점기준에 비추어 학생 답안에 대한 피드백 초안을 써 주세요.
+
+[발문] ${v("s2.q","2단계 확정 발문")}
+[채점기준]
+${v("s3.final","3단계 확정 채점기준")}
+[학생 답안]
+${v("s6.ans","익명 처리한 학생 답안")}
+
+피드백 원칙
+- 점수는 매기지 말고, 채점 요소마다 지금 어느 수준인지와 그 근거가 되는 답안 속 문장을 밝히세요.
+- 잘한 점 1가지를 답안 문장을 인용해 구체적으로 쓰세요.
+- 다음에 고칠 점은 ${v("s6.n","개수")}가지만, 무엇을 어떻게 고치면 좋을지 쓰세요.
+- 고친 문장을 대신 써 주지 말고, 학생이 스스로 생각할 수 있는 질문으로 끝내세요.
+- 학생의 입장이나 가치 판단 자체를 바꾸려 하지 말고, 근거와 논리만 다루세요.
+- ${v("s0.grade","학년")} 학생이 이해할 수 있는 말로, ${v("s6.len","분량")} 안팎으로 쓰세요.`
+};
+
+const USE = { no:"사용 안 함", cond:"조건부 사용", ok:"사용 가능" };
+function notice(){
+  const r = S.s5.rows || [];
+  const line = x => `· ${x.stage}${x.cond ? ` (${x.cond})` : ""}`;
+  const grp = k => r.filter(x => x.use === k && x.stage.trim());
+  let t = `[이번 서·논술형 평가의 AI 활용 약속]\n`;
+  const ok = grp("ok"), cond = grp("cond"), no = grp("no");
+  if (ok.length) t += `\n✔ AI를 써도 되는 단계\n${ok.map(line).join("\n")}\n`;
+  if (cond.length) t += `\n△ 조건을 지키면 쓸 수 있는 단계\n${cond.map(line).join("\n")}\n`;
+  if (no.length) t += `\n✖ 스스로 해야 하는 단계\n${no.map(line).join("\n")}\n`;
+  const extra = [];
+  if (S.s5.mark) extra.push("AI를 쓴 곳마다 무엇을 물었는지 짧게 표시하기 (예: 검색어 추천받음, 통계가 있는 기관을 물어봄)");
+  extra.push("AI가 알려 준 수치·사실은 원래 출처(기관·통계·보고서)에서 확인하고, 확인이 안 되면 쓰지 않기");
+  if (S.s5.self) extra.push("제출 전에 채점기준표로 스스로 점검하고, 고친 점 적기");
+  if (S.s5.honest) extra.push("‘정직한 자료 활용(출처·AI 활용 표시·스스로 쓴 해석)’도 채점 요소에 들어가요");
+  t += `\n꼭 지킬 것\n${extra.map(x => "· " + x).join("\n")}`;
+  return t;
+}
+
+/* ----- 화면 조각 ----- */
+const field = (label, p, o = {}) => {
+  const id = "f_" + p.replace(/\./g, "_"), val = esc(get(p));
+  const ctl = o.area
+    ? `<textarea id="${id}" data-bind="${p}" rows="${o.rows || 4}" placeholder="${esc(o.ph || "")}"${o.final ? ' class="final"' : ""}>${val}</textarea>`
+    : `<input type="text" id="${id}" data-bind="${p}" value="${val}" placeholder="${esc(o.ph || "")}">`;
+  return `<div class="f${o.full ? " full" : ""}"><label for="${id}">${label}${o.hint ? ` <span class="hint">${o.hint}</span>` : ""}</label>${ctl}</div>`;
+};
+const radios = (label, p, opts) => `<div class="f"><span style="font-size:13.5px;font-weight:600">${label}</span><div class="seg" role="radiogroup" aria-label="${label}">${opts.map(o =>
+  `<label><input type="radio" name="${p}" data-bind="${p}" value="${esc(o)}"${get(p) === o ? " checked" : ""}>${esc(o)}</label>`).join("")}</div></div>`;
+const card = (n, title, body, extra = "") => `<section class="card"><div class="card-h"><span class="n">${n}</span><h2>${title}</h2>${extra}</div>${body}</section>`;
+const promptCard = (n, k) => card(n, "프롬프트 복사해서 AI에 붙여 넣기",
+  `<p class="hint">앞에서 쓴 내용이 자동으로 들어가요. <span class="miss">[빨간 괄호]</span>는 아직 비어 있는 칸이에요. 학교나 교육청에서 허용한 AI 도구를 쓰세요.</p>
+   <div class="prompt"><div class="bar">프롬프트<button class="btn primary" type="button" data-copy="prompt">복사</button></div><pre id="promptText"></pre></div>`);
+const aiCard = (n, p, ph) => card(n, "AI 결과 붙여 넣기", `${field("AI가 준 답", p, { area:true, rows:8, ph })}<p class="hint">붙여 넣은 내용은 비교용 기록이에요. 확정본은 아래에서 교사가 직접 씁니다.</p>`);
+const checkCard = (n, k, ...src) => {
+  let i = 0;
+  const groups = CHECKS[k].map(([g, items]) => `<div class="cgroup"><h3>${g}</h3>${items.map(it => {
+    const [t, ai] = Array.isArray(it) ? it : [it, 0], key = k + "." + (i++);
+    return `<label class="ck"><input type="checkbox" data-check="${key}"${S.checks[key] ? " checked" : ""}><span>${esc(t)}${ai ? '<span class="ai-flag">AI 점검</span>' : ""}</span></label>`;
+  }).join("")}</div>`).join("");
+  return card(n, "교사 점검: AI 결과를 기준에 비추어 보기", `<div class="checks">${groups}</div>${srcLine(...src)}`, `<span class="count sp" data-count="${k}"></span>`);
+};
+const nav = () => `<div class="nav">${S.step > 0 ? `<button class="btn" type="button" data-go="${S.step - 1}">← 이전 단계</button>` : "<span></span>"}${S.step < STEPS.length - 1 ? `<button class="btn primary" type="button" data-go="${S.step + 1}">다음 단계 →</button>` : ""}</div>`;
+const head = (eyebrow, title, lead, ai, me) => `<div class="head"><span class="eyebrow">${eyebrow}</span><h1>${title}</h1><p class="lead">${lead}</p>${ai ? `<div class="roles"><div class="role ai"><b>AI가 하는 일</b>${ai}</div><div class="role me"><b>교사가 판단할 일</b>${me}</div></div>` : ""}</div>`;
+
+const STEPS = [
+  { t:"수업 정보", ai:false, r:() => head("시작", "수업 정보 쓰기", "이 내용이 모든 단계의 프롬프트에 자동으로 들어가요. 성취기준은 교육과정 문서에서 그대로 옮겨 쓰세요.") +
+    card(1, "과목과 성취기준", `<div class="grid">${field("학교급", "s0.level")}${field("학년", "s0.grade", { ph:"예: 1학년" })}${field("과목", "s0.subject", { ph:"예: 생활과 윤리" })}${field("성취기준 코드", "s0.code", { ph:"예: [12생윤02-01]" })}
+      ${field("성취기준 문장", "s0.std", { area:true, rows:3, full:true })}
+      ${field("성취수준", "s0.levels", { area:true, rows:3, full:true, hint:"있으면 붙여 넣기 (선택)" })}
+      ${field("수업 맥락", "s0.context", { area:true, rows:4, full:true, hint:"어떤 수업 뒤에 보는 평가인지, AI를 어디까지 쓰는지" })}</div>`) +
+    `<div class="warn"><b>시작 전에</b> 학생 이름·학번 같은 개인정보는 어떤 AI에도 넣지 않아요. AI 도구는 학교나 교육청에서 허용한 것을 쓰세요.</div>` },
+  { t:"평가 요소 뽑기", ai:true, r:() => head("AI 활용 ①", "성취기준에서 평가 요소 뽑기", "성취기준을 지식·이해, 과정·기능, 가치·태도로 나누고, 서·논술형으로 평가할 핵심 요소를 고릅니다.", "성취기준을 분해해 평가 요소 후보를 많이 내놓기", "후보 중 무엇을 평가할지 고르고, 수업에서 다룬 범위로 줄이기") +
+    promptCard(1, 1) + aiCard(2, "s1.ai", "AI가 준 평가 요소 후보 표를 붙여 넣으세요") + checkCard(3, 1, "II", "III") +
+    card(4, "확정: 내가 고른 평가 요소", field("평가 요소 (2~4개)", "s1.final", { area:true, rows:5, final:true, ph:"① …하기\n② …하기" })) },
+  { t:"문항 초안", ai:true, r:() => head("AI 활용 ②", "발문·자료·조건으로 문항 초안 만들기", "확정한 평가 요소로 문항의 세 부분(발문, 자료, 조건)을 짜고, 문항 검토 관점으로 고칩니다.", "발문·자료·조건 틀에 맞춘 초안과 변형 문항 만들기", "자료의 사실 확인, 정답 암시와 모호한 조건 걸러 내기") +
+    card(1, "문항 설계 정보", `<div class="grid">${radios("문항 유형", "s2.type", ["서술형", "논술형"])}${field("배점", "s2.points", { ph:"예: 10" })}
+      ${field("학생에게 줄 상황·소재", "s2.situation", { full:true, ph:"예: 교내 토론 동아리에서 찬성 측 입론서를 준비하는 상황" })}
+      ${field("자료", "s2.data", { ph:"예: 제시문 2개와 통계표 1개" })}${field("답안 분량", "s2.length", { ph:"예: 500자 내외" })}</div>`) +
+    promptCard(2, 2) + aiCard(3, "s2.ai", "AI가 만든 문항 초안을 붙여 넣으세요") + checkCard(4, 2, "III") +
+    card(5, "확정: 내가 고친 문항", `${field("발문", "s2.q", { area:true, rows:3, final:true })}${field("자료", "s2.d", { area:true, rows:5, final:true })}${field("조건", "s2.c", { area:true, rows:4, final:true })}`) },
+  { t:"채점기준 초안", ai:true, r:() => head("AI 활용 ③", "채점기준표 초안 만들기", "채점 요소, 수준, 배점을 정하고 채점기준 검토 항목으로 다듬습니다.", "채점 요소별 수준 기술문과 부분점수 기준 초안 쓰기", "수준이 겹치거나 빈 곳, 채점자마다 다르게 읽힐 말 고치기") +
+    card(1, "채점 방식", `<div class="grid">${radios("채점 방식", "s3.mode", ["분석적", "총체적"])}${radios("수준 수", "s3.n", ["3", "4", "5"])}</div>
+      <p class="hint">분석적 채점은 평가 요소마다 점수를 매겨 합산하고, 총체적 채점은 답안 전체를 한 번에 판단합니다. 구체적인 피드백이 필요하면 분석적 채점이 알맞아요.</p>`) +
+    promptCard(2, 3) + aiCard(3, "s3.ai", "AI가 만든 채점기준표를 붙여 넣으세요") + checkCard(4, 3, "IV") +
+    card(5, "확정: 내가 다듬은 채점기준", field("채점기준표", "s3.final", { area:true, rows:12, final:true })) },
+  { t:"예시답안·가채점", ai:true, r:() => head("AI 활용 ④", "예시답안 만들고 가상 답안으로 미리 채점하기", "AI가 쓴 수준별 가상 답안을 내 채점기준으로 채점해 보며 변별력과 타당성을 점검합니다. 실제 학생 답안을 받기 전에 채점기준의 빈틈을 찾는 단계예요.", "수준별 예시답안과 판정이 애매한 가상 답안 만들기", "가상 답안을 직접 채점해 보고 채점기준 고치기") +
+    promptCard(1, 4) + aiCard(2, "s4.ai", "AI가 만든 예시답안과 가상 답안 A~E를 붙여 넣으세요") +
+    card(3, "가채점 기록", `<p class="hint">AI가 의도한 수준은 보지 말고 먼저 채점한 뒤, 마지막에 비교하세요.</p>
+      <div class="tbl-wrap"><table><thead><tr><th>답안</th><th>내가 매긴 점수</th><th>AI가 의도한 수준</th><th>판정이 애매했던 점</th></tr></thead><tbody>${"ABCDE".split("").map((L, i) =>
+        `<tr><td><b>${L}</b></td><td><input type="text" aria-label="${L} 점수" data-bind="s4.rows.${i}.score" value="${esc(get(`s4.rows.${i}.score`))}"></td><td><input type="text" aria-label="${L} 의도한 수준" data-bind="s4.rows.${i}.intent" value="${esc(get(`s4.rows.${i}.intent`))}"></td><td><input type="text" aria-label="${L} 애매했던 점" data-bind="s4.rows.${i}.note" value="${esc(get(`s4.rows.${i}.note`))}"></td></tr>`).join("")}</tbody></table></div>`) +
+    checkCard(4, 4, "IV", "V") +
+    card(5, "확정: 예시답안과 채점기준 수정 사항", `${field("확정 예시답안 (수준별)", "s4.final", { area:true, rows:8, final:true })}${field("가채점 뒤 채점기준에서 고친 점", "s4.fix", { area:true, rows:4, final:true, ph:"예: 2점과 1점 사이 답안이 많아 ‘근거 1개만 제시’ 기준을 추가함" })}`) },
+  { t:"AI 활용 안내문", ai:false, r:() => head("과정 평가 설계", "학생용 AI 활용 안내문 만들기", "쓰기 과정의 단계마다 AI를 쓸 수 있는지 정하면 학생용 안내문이 자동으로 만들어져요. 평가하려는 능력은 학생 몫으로 남기는 것이 원칙입니다.") +
+    card(1, "단계별 AI 허용 범위", `<div class="tbl-wrap"><table><thead><tr><th>쓰기 단계</th><th>AI 사용</th><th>조건·메모</th></tr></thead><tbody>${S.s5.rows.map((r, i) =>
+      `<tr><td><input type="text" aria-label="단계 이름" data-bind="s5.rows.${i}.stage" value="${esc(r.stage)}"></td><td><select aria-label="${esc(r.stage)} AI 사용" data-bind="s5.rows.${i}.use">${Object.entries(USE).map(([k, t]) => `<option value="${k}"${r.use === k ? " selected" : ""}>${t}</option>`).join("")}</select></td><td><input type="text" aria-label="${esc(r.stage)} 조건" data-bind="s5.rows.${i}.cond" value="${esc(r.cond)}"></td></tr>`).join("")}</tbody></table></div>
+      <div class="toggles">
+        <label class="ck"><input type="checkbox" data-bind="s5.mark"${S.s5.mark ? " checked" : ""}><span>AI를 쓴 곳에 <b>AI 활용 표시</b>를 남기게 하기</span></label>
+        <label class="ck"><input type="checkbox" data-bind="s5.self"${S.s5.self ? " checked" : ""}><span>제출 전 <b>채점기준표로 자기 점검</b>하게 하기</span></label>
+        <label class="ck"><input type="checkbox" data-bind="s5.honest"${S.s5.honest ? " checked" : ""}><span>채점기준에 <b>정직한 자료 활용</b> 요소 넣기</span></label>
+      </div>`) +
+    card(2, "자동으로 만든 안내문", `<div class="notice" id="noticeText"></div><div class="nav"><span class="hint">AI로 학생 눈높이에 맞게 다듬고 싶으면 아래 프롬프트를 쓰세요.</span><button class="btn" type="button" data-copy="notice">안내문 복사</button></div>`) +
+    promptCard(3, 5) + checkCard(4, 5, "II") +
+    card(5, "확정: 학생에게 줄 안내문", field("안내문", "s5.final", { area:true, rows:8, final:true, ph:"비워 두면 위의 자동 안내문이 설계안에 들어가요" })) },
+  { t:"피드백 초안", ai:true, r:() => head("AI 활용 ⑤", "채점기준을 넣은 피드백 초안 만들기", "AI에게 피드백 초안을 받고, 효과적인 피드백 점검표로 고칩니다. 점수를 매기는 일은 교사가 합니다.", "채점기준에 맞춰 잘한 점과 고칠 점을 정리한 초안 쓰기", "답안에 없는 내용, 과한 칭찬, 입장을 몰아가는 말 고치고 확정하기") +
+    `<div class="warn"><b>개인정보 주의</b> 학생 답안은 이름·학번을 지우고 넣으세요. 학생 답안은 이 브라우저에만 남고 시트에는 저장되지 않아요.</div>` +
+    card(1, "학생 답안과 피드백 방식", `${field("익명 처리한 학생 답안", "s6.ans", { area:true, rows:7, ph:"연습할 때는 4단계의 가상 답안을 붙여 넣어도 돼요" })}
+      <div class="grid">${radios("고칠 점 개수", "s6.n", ["1", "2", "3"])}${radios("분량", "s6.len", ["200자", "300자", "500자"])}</div>`) +
+    promptCard(2, 6) + aiCard(3, "s6.ai", "AI가 쓴 피드백 초안을 붙여 넣으세요") + checkCard(4, 6, "V") +
+    card(5, "확정: 학생에게 줄 피드백", field("교사가 고친 피드백", "s6.final", { area:true, rows:6, final:true })) },
+  { t:"설계안 모아 보기", ai:false, r:() => head("마무리", "내 서·논술형 평가 설계안", "단계별 확정본과 점검 결과를 한곳에 모았어요. 복사해서 문서로 옮기거나, 시트에 저장해 3단계 실천 보고회 자료로 쓰세요.") + summaryHTML() }
+];
+
+/* ----- 설계안 요약 ----- */
+const PARTS = () => [
+  ["수업 정보", `${who()}\n${S.s0.code || ""} ${S.s0.std || ""}`.trim()],
+  ["평가 요소", S.s1.final],
+  ["문항: 발문", S.s2.q], ["문항: 자료", S.s2.d], ["문항: 조건", S.s2.c],
+  ["채점기준", S.s3.final],
+  ["예시답안", S.s4.final], ["가채점 뒤 채점기준에서 고친 점", S.s4.fix],
+  ["학생용 AI 활용 안내문", S.s5.final || notice()],
+  ["피드백 (교사 확정)", S.s6.final]
+];
+const summaryText = () => "서·논술형 평가 설계안\n\n" + PARTS().map(([h, b]) => `■ ${h}\n${String(b || "").trim() || "(비어 있음)"}`).join("\n\n") +
+  "\n\n■ 교사 점검 완료\n" + [1,2,3,4,5,6].map(n => { const [d, t] = checkCount(n); return `${STEPS[n].t} ${d}/${t}`; }).join(" · ");
+function summaryHTML(){
+  return card("✓", "점검 완료 현황", `<div class="meter">${[1,2,3,4,5,6].map(n => { const [d, t] = checkCount(n); return `<div class="${d === t ? "done" : ""}"><b>${d}/${t}</b>${STEPS[n].t}</div>`; }).join("")}</div>`) +
+    `<section class="card"><div class="card-h"><h2>설계안</h2><button class="btn primary sp" type="button" data-copy="summary">설계안 전체 복사</button></div><div class="sum">${PARTS().map(([h, b]) =>
+      `<section><h3>${h}</h3>${String(b || "").trim() ? `<div class="body">${esc(b)}</div>` : `<p class="empty">아직 비어 있어요.</p>`}</section>`).join("")}</div></section>` +
+    card("+", "프롬프트 모음", `<p class="hint">이번 설계에 쓴 프롬프트 5개를 한꺼번에 복사해 두고 다음 평가 때 다시 쓸 수 있어요.</p><div><button class="btn" type="button" data-copy="prompts">프롬프트 모음 복사</button></div>`);
+}
+
+/* ----- 그리기 ----- */
+function drawRail(){
+  $("rail").innerHTML = `<span class="rail-label">실습 단계</span>` + STEPS.map((s, i) => {
+    let tag = "";
+    if (CHECKS[i]) { const [d, t] = checkCount(i); tag = `<span class="tag${d === t ? " done" : ""}">${d}/${t}</span>`; }
+    else if (s.ai === false && i < STEPS.length - 1) tag = "";
+    return `<button type="button" data-go="${i}" class="${S.step === i ? "on" : ""}"${S.step === i ? ' aria-current="step"' : ""}><span class="no">${i === STEPS.length - 1 ? "✓" : i}</span><span>${s.t}${s.ai ? `<br><span class="ai">AI 활용 ${"①②③④⑤"[[1,2,3,4,6].indexOf(i)]}</span>` : ""}</span>${tag}</button>`;
+  }).join("");
+}
+function draw(){
+  $("sampleBanner").hidden = !S.sample;
+  drawRail();
+  $("main").innerHTML = STEPS[S.step].r() + nav();
+  refresh();
+}
+function refresh(){
+  const pt = $("promptText");
+  if (pt && PROMPTS[curPromptKey()]) pt.innerHTML = esc(PROMPTS[curPromptKey()]()).replace(/⟦([^⟧]*)⟧/g, '<span class="miss">[$1]</span>');
+  const nt = $("noticeText"); if (nt) nt.textContent = notice();
+  document.querySelectorAll("[data-count]").forEach(el => { const [d, t] = checkCount(el.dataset.count); el.textContent = `${d} / ${t}`; el.classList.toggle("done", d === t); });
+  drawRailTags();
+}
+function drawRailTags(){
+  document.querySelectorAll("#rail button").forEach((b, i) => { const tg = b.querySelector(".tag"); if (tg && CHECKS[i]) { const [d, t] = checkCount(i); tg.textContent = `${d}/${t}`; tg.classList.toggle("done", d === t); } });
+}
+const curPromptKey = () => S.step;
+
+/* ----- 복사 ----- */
+function copy(text, btn){
+  const done = () => { if (!btn) return; const o = btn.textContent; btn.textContent = "복사됨"; setTimeout(() => btn.textContent = o, 1400); };
+  const fallback = () => { $("copyArea").value = text; $("copyModal").hidden = false; $("copyArea").focus(); $("copyArea").select(); };
+  try { navigator.clipboard.writeText(text).then(done, fallback); } catch(e){ fallback(); }
+}
+const allPrompts = () => [1,2,3,4,6].map((n, i) => `■ AI 활용 ${"①②③④⑤"[i]} ${STEPS[n].t}\n\n${PROMPTS[n]()}`).join("\n\n" + "-".repeat(30) + "\n\n");
+
+/* ----- 시트 연결 ----- */
+let login = null, dirty = false, saveTimer = null;
+try { const l = JSON.parse(sessionStorage.getItem(KEY + "-login") || "null"); if (l) login = l; } catch(e){}
+const setStatus = (t, cls) => { const el = $("syncStatus"); el.textContent = t; el.className = "status" + (cls ? " " + cls : ""); };
+const sheetSummary = () => {
+  const [tot, all] = [1,2,3,4,5,6].reduce((a, n) => { const [d, t] = checkCount(n); return [a[0] + d, a[1] + t]; }, [0, 0]);
+  return { who:who(), step:`${S.step}. ${STEPS[S.step].t}`, checks:`${tot}/${all}`, elems:S.s1.final, q:S.s2.q, d:S.s2.d, c:S.s2.c,
+    rubric:S.s3.final, model:S.s4.final, fix:S.s4.fix, notice:S.s5.final || notice(), feedback:S.s6.final };
+};
+async function api(action, extra = {}){
+  const r = await fetch(SERVER_URL, { method:"POST", headers:{ "Content-Type":"text/plain;charset=utf-8" }, body:JSON.stringify(Object.assign({ action }, login, extra)) });
+  const j = await r.json(); if (!j.ok) throw new Error(j.error || "저장하지 못했어요.");
+  return j;
+}
+async function saveSheet(){
+  if (!login || !SERVER_URL) return;
+  clearTimeout(saveTimer); setStatus("시트에 저장하는 중…");
+  const data = JSON.parse(JSON.stringify(S)); data.s6.ans = "";   // 학생 답안은 시트에 보내지 않음
+  try { await api("save", { data, summary:sheetSummary() }); dirty = false;
+    setStatus(`${login.name} · 시트에 저장됨 ${new Date().toLocaleTimeString("ko-KR", { hour:"2-digit", minute:"2-digit" })}`, "ok");
+  } catch(e){ setStatus("시트 저장 실패: " + e.message, "err"); }
+}
+function syncUI(){
+  $("btnSave").hidden = !login;
+  $("btnLogin").textContent = login ? "연결 바꾸기" : "시트에 연결";
+  if (!SERVER_URL) { $("btnLogin").hidden = true; setStatus("이 브라우저에 자동 저장 중"); }
+  else if (login) setStatus(`${login.name} · 시트 연결됨`, "ok");
+}
+$("btnLogin").onclick = () => { $("lgCode").value = login?.code || COURSE_CODE_HINT; $("lgName").value = login?.name || ""; $("lgPin").value = ""; $("lgMsg").textContent = ""; $("loginModal").hidden = false; $("lgCode").focus(); };
+$("lgCancel").onclick = () => $("loginModal").hidden = true;
+$("loginForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  const l = { code:$("lgCode").value.trim(), name:$("lgName").value.trim(), pin:$("lgPin").value.trim() };
+  if (!l.code || !l.name || !/^\d{4}$/.test(l.pin)) { $("lgMsg").textContent = "연수 코드, 이름, 숫자 4자리 비밀번호를 모두 써 주세요."; return; }
+  $("lgGo").disabled = true; $("lgMsg").textContent = "연결하는 중…";
+  const prev = login; login = l;
+  try {
+    const j = await api("load");
+    if (j.data) { const ans = S.s6.ans; S = Object.assign(blank(), j.data); S.s6.ans = ans; saveLocal(); $("lgMsg").textContent = ""; }
+    else { if (S.sample) { S = blank(); saveLocal(); } await saveSheet(); }
+    try { sessionStorage.setItem(KEY + "-login", JSON.stringify(l)); } catch(e){}
+    $("loginModal").hidden = true; syncUI(); draw();
+    setStatus(j.data ? `${l.name} · 저장된 설계안을 불러왔어요` : `${l.name} · 새 설계안을 시트에 만들었어요`, "ok");
+  } catch(err){ login = prev; $("lgMsg").textContent = err.message === "Failed to fetch" ? "시트 서버에 연결할 수 없어요. 인터넷 연결이나 서버 주소를 확인해 주세요." : err.message; }
+  $("lgGo").disabled = false;
+});
+$("btnSave").onclick = saveSheet;
+
+/* ----- 이벤트 ----- */
+document.addEventListener("input", e => {
+  const t = e.target;
+  if (t.dataset.bind) { set(t.dataset.bind, t.type === "checkbox" ? t.checked : t.value); }
+  else if (t.dataset.check) S.checks[t.dataset.check] = t.checked;
+  else return;
+  saveLocal(); refresh();
+  if (login) { dirty = true; clearTimeout(saveTimer); saveTimer = setTimeout(saveSheet, 20000); }
+});
+document.addEventListener("click", e => {
+  const go = e.target.closest("[data-go]");
+  if (go) { S.step = +go.dataset.go; saveLocal(); draw(); window.scrollTo({ top:0 }); if (login && dirty) saveSheet(); return; }
+  const c = e.target.closest("[data-copy]");
+  if (c) { const k = c.dataset.copy;
+    copy(plain(k === "prompt" ? PROMPTS[curPromptKey()]() : k === "notice" ? notice() : k === "summary" ? summaryText() : allPrompts()), c); }
+});
+let armed = null;
+$("btnReset").onclick = () => {
+  const b = $("btnReset");
+  if (!armed) { b.classList.add("armed"); b.textContent = "한 번 더 누르면 지워져요"; armed = setTimeout(() => { b.classList.remove("armed"); b.textContent = "새로 시작"; armed = null; }, 3500); return; }
+  clearTimeout(armed); armed = null; b.classList.remove("armed"); b.textContent = "새로 시작";
+  S = blank(); saveLocal(); draw(); if (login) saveSheet();
+};
+$("copyClose").onclick = () => $("copyModal").hidden = true;
+document.addEventListener("keydown", e => { if (e.key === "Escape") { $("copyModal").hidden = true; $("loginModal").hidden = true; } });
+window.addEventListener("beforeunload", () => { if (login && dirty) saveSheet(); });
+
+syncUI(); draw();
+</script>
+</body>
+</html>
