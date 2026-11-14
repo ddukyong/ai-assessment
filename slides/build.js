@@ -4,7 +4,7 @@ const { applyTheme } = require("/root/.claude/skills/synced/3a682cee-e22e-4645-a
 const OUT = process.argv[2] || "deck.pptx";
 
 const THEME = {
-  name: "연두 서논술형", headFontFace: "Pretendard", bodyFontFace: "Pretendard",
+  name: "연두 서논술형", headFontFace: "맑은 고딕", bodyFontFace: "맑은 고딕",
   colors: { dk1:"1F2A17", lt1:"FFFFFF", dk2:"35611C", lt2:"F1F8E4", accent1:"9CCC3D", accent2:"5F9A28", accent3:"D7EBAF",
     accent4:"E8792B", accent5:"FBE3D0", accent6:"6B7566", hlink:"35611C", folHlink:"5F9A28" }
 };
