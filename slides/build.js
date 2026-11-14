@@ -92,13 +92,13 @@ section("도입");
     T(s, h, { x:x + 0.2, y:2.25, w:2.4, h:0.4, fontSize:19, bold:true, color:C.text2 }); bullets(s, items, { x:x + 0.2, y:2.9, w:2.4, h:1.6, fontSize:15 }); }); }
 
 { const s = slide("CONTENT", "AI가 글을 써 주는 교실", "");
-  s.addImage({ path:__dirname + "/ebs.png", x:0.5, y:1.3, w:3.9, h:2.1, altText:"EBS 다큐프라임 생각의 멸종 1부 장면. 자막: AI와 함께 푼 수학 문제, 실력도 늘었을까?", objectName:"EBS 장면" });
-  T(s, "출처: EBS 다큐프라임 〈생각의 멸종〉 1부", { x:0.5, y:3.46, w:3.9, h:0.22, fontSize:10, color:C.accent6 });
-  box(s, 0.5, 3.8, 3.9, 1.0, C.text2); T(s, "우리는 지금 무엇을\n평가하고 있을까", { x:0.75, y:3.8, w:3.4, h:1.0, fontSize:20, bold:true, color:C.background1, valign:"middle" });
-  [["AI와 함께하면 과제는 풀린다","수학 문제도, 글쓰기도 AI가 그럴듯한 답을 내놓습니다. 실력도 함께 늘었을까요?"],
+  s.addImage({ path:__dirname + "/ai_class.jpg", x:0.5, y:1.2, w:4.75, h:2.6, altText:"EBS 다큐프라임 생각의 멸종 장면. 교실에서 시험을 보는 학생들 위로 자막: 최근 한 달 내 AI의 도움으로 문제를 해결한 사람 79.9%. 한국보건사회연구원, 조사대상 15~79세 1,019명", objectName:"EBS 장면" });
+  T(s, "출처: EBS 다큐프라임 〈생각의 멸종〉 (자료: 한국보건사회연구원)", { x:0.5, y:3.86, w:4.75, h:0.22, fontSize:10, color:C.accent6 });
+  box(s, 0.5, 4.2, 4.75, 0.7, C.text2); T(s, "우리는 지금 무엇을 평가하고 있을까", { x:0.72, y:4.2, w:4.4, h:0.7, fontSize:17, bold:true, color:C.background1, valign:"middle" });
+  [["열에 여덟은 AI로 문제를 푼다","최근 한 달 안에 AI의 도움으로 문제를 해결한 사람이 79.9%입니다."],
    ["결과물만으로는 알 수 없다","잘 쓴 글이 학생의 생각인지, AI의 문장인지 구별하기 어렵습니다."],
-   ["생각이 드러나는 평가가 필요하다","학생이 무엇을 이해하고 어떻게 판단했는지 볼 수 있어야 합니다."]].forEach(([h, b], i) => { const y = 1.3 + i * 1.2;
-    num(s, i + 1, 4.75, y + 0.05); T(s, h, { x:5.35, y, w:4.15, h:0.4, fontSize:17, bold:true, color:C.text2 }); T(s, b, { x:5.35, y:y + 0.43, w:4.15, h:0.65 }); }); }
+   ["생각이 드러나는 평가가 필요하다","학생이 무엇을 이해하고 어떻게 판단했는지 볼 수 있어야 합니다."]].forEach(([h, b], i) => { const y = 1.2 + i * 1.25;
+    num(s, i + 1, 5.6, y + 0.03); T(s, h, { x:6.15, y, w:3.35, h:0.4, fontSize:16, bold:true, color:C.text2 }); T(s, b, { x:6.15, y:y + 0.43, w:3.35, h:0.72 }); }); }
 
 /* ================= 1차시 ================= */
 section("1 평가 목적 재정립");
